@@ -1,0 +1,5 @@
+{
+  "name": "EasyAgenda- Sistema de Agendamento de Salas",
+  "description": "Uma aplicação otimizada para agendamento de salas em períodos fixos do dia. Oferece uma visualização clara em grade da disponibilidade, permitindo que os usuários reservem espaços de forma eficiente. Administradores têm acesso a ferramentas de gerenciamento abrangentes para salas, horários e acesso de usuários.",
+  "requestFramePermissions": []
+}
