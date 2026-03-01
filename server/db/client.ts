@@ -1,5 +1,6 @@
-// Database Client - Suporta SQLite local e Turso (libSQL)
+// Database Client - Suporta SQLite local e Turso (libSQL) com Drizzle
 import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { createClient } from '@libsql/client';
 import * as schema from './schema';
 import dotenv from 'dotenv';
@@ -21,12 +22,13 @@ if (useTurso) {
         authToken: process.env.TURSO_AUTH_TOKEN,
     });
     
-    // Usar raw client para queries
-    db = client;
+    // Usar Drizzle com libSQL client
+    db = drizzle(client, { schema });
 } else {
     // Desenvolvimento: SQLite local
     console.log('🔌 Conectando ao SQLite local...');
-    db = new Database('local.db');
+    const sqlite = new Database('local.db');
+    db = drizzle(sqlite, { schema });
 }
 
 export { db };

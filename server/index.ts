@@ -324,13 +324,6 @@ app.put('/api/users/:id/password', authenticate, async (req, res) => {
             return;
         }
 
-        // Verify current password
-        const user = await db.query.users.findFirst({ where: eq(users.id, req.params.id) });
-        if (!user) {
-            res.status(404).json({ error: 'User not found' });
-            return;
-        }
-
         // Verify current password with bcrypt
         if (!await bcrypt.compare(currentPassword, user.passwordHash)) {
             res.status(400).json({ error: 'Senha atual incorreta' });
