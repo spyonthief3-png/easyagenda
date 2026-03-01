@@ -56,12 +56,13 @@ app.get('/health', (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const validation = validateBody(loginSchema, req.body);
-        if (!validation.success) {
-            res.status(400).json({ error: validation.error });
+        if (!validation.success || !validation.data) {
+            res.status(400).json({ error: validation.error || 'Dados inválidos' });
             return;
         }
 
-        const { email, password } = validation.data;
+        const email = validation.data.email;
+        const password = validation.data.password;
         const user = await db.query.users.findFirst({ where: eq(users.email, email) });
 
         if (!user || !await bcrypt.compare(password, user.passwordHash)) {

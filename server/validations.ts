@@ -48,7 +48,7 @@ export const createRoomSchema = z.object({
     locationId: z.string().min(1, 'Local obrigatório'),
     roomTypeId: z.string().min(1, 'Tipo de sala obrigatório'),
     capacity: z.number().int().positive('Capacidade deve ser positiva'),
-    resources: z.record(z.unknown()).optional().default({}),
+    resources: z.record(z.string(), z.unknown()).optional().default({}),
     isActive: z.boolean().optional().default(true)
 });
 
@@ -99,12 +99,12 @@ export const updateIssueSchema = z.object({
     resolutionNotes: z.string().optional()
 });
 
-// Helper para validar e retornar erros
-export function validateBody<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; error: string } {
+// Helper simplificado para validar
+export function validateBody<T>(schema: z.ZodSchema<T>, data: unknown): { success: boolean; data?: T; error?: string } {
     const result = schema.safeParse(data);
     if (!result.success) {
         const errors = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
-        return { success: false, error: errors } as { success: false; error: string };
+        return { success: false, error: errors };
     }
-    return { success: true, data: result.data } as { success: true; data: T };
+    return { success: true, data: result.data };
 }
