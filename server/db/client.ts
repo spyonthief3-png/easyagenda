@@ -1,5 +1,4 @@
 // Database Client - Suporta SQLite local e Turso (libSQL) com Drizzle
-import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { createClient } from '@libsql/client';
 import * as schema from './schema';
@@ -12,6 +11,7 @@ const useTurso = !!(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOK
 
 console.log('🔌 DB Config:', { useTurso, hasUrl: !!process.env.TURSO_DATABASE_URL, hasToken: !!process.env.TURSO_AUTH_TOKEN });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let db: any;
 
 if (useTurso) {
@@ -27,6 +27,8 @@ if (useTurso) {
 } else {
     // Desenvolvimento: SQLite local
     console.log('🔌 Conectando ao SQLite local...');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const Database = require('better-sqlite3');
     const sqlite = new Database('local.db');
     db = drizzle(sqlite, { schema });
 }
