@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 300,
     },
     define: {
-      'process.env': {}
+      'process.env.NODE_ENV': JSON.stringify(mode),
     },
     resolve: {
       alias: {
