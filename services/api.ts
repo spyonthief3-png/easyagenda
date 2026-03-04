@@ -147,7 +147,7 @@ export const api = {
     },
 
     // Auth
-    login: async (credentials: { email: string, password: string }): Promise<{ user: User }> => {
+    login: async (credentials: { email: string, password: string }): Promise<{ user: User, token: string }> => {
         return fetchClient('/auth/login', { method: 'POST', body: JSON.stringify(credentials) });
     },
     logout: async (): Promise<{ success: boolean }> => {

@@ -2,11 +2,15 @@ import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
-  const isProduction = mode === 'production';
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const env = loadEnv(mode, process.cwd(), '');
   
   return {
+    plugins: [
+      react() // Vite standard React plugin
+    ],
     server: {
       port: 5173,
       host: '0.0.0.0',
@@ -18,7 +22,6 @@ export default defineConfig(({ mode }) => {
         }
       }
     },
-    plugins: [react()],
     build: {
       minify: 'esbuild',
       sourcemap: false,
@@ -29,14 +32,11 @@ export default defineConfig(({ mode }) => {
           }
         }
       },
-      chunkSizeWarningLimit: 300,
-    },
-    define: {
-      'process.env.NODE_ENV': JSON.stringify(mode),
+      chunkSizeWarningLimit: 600,
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, './'),
       }
     }
   };
