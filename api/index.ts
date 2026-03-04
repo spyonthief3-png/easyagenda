@@ -574,43 +574,96 @@ app.delete('/api/bookings/:id', authenticate, async (req: any, res) => {
 
 // ==================== AVAILABILITY ====================
 
-app.get('/api/availability', authenticate, async (req, res) => {
+app.get('/api/availability', authenticate, async (req: any, res) => {
     try {
         const { date } = req.query;
         if (!date) { res.status(400).json({ error: 'date query param required' }); return; }
         
-        const rows = await dbQuery(`
-            SELECT r.*, l.name as locationName, rt.name as roomTypeName 
-            FROM rooms r 
-            LEFT JOIN locations l ON r.locationId = l.id 
-            LEFT JOIN room_types rt ON r.roomTypeId = rt.id
-            WHERE r.isActive = 1
-        `);
+        const dateStr = String(date);
+        const dateObj = new Date(dateStr + 'T00:00:00');
+        const dayOfWeek = dateObj.getDay();
+        const currentUserId = req.user.id;
 
-        const rooms = rows.map((r: any) => ({
-            ...r,
-            resources: typeof r.resources === 'string' ? JSON.parse(r.resources) : r.resources,
-            location: { id: r.locationId, name: r.locationName },
-            roomType: { id: r.roomTypeId, name: r.roomTypeName }
-        }));
+        const allRooms = await dbQuery('SELECT * FROM rooms WHERE isActive = 1');
+        const allPeriods = await dbQuery('SELECT * FROM periods ORDER BY startTime');
 
-        const periods = await dbQuery('SELECT * FROM periods ORDER BY startTime');
-        const bookings = await dbQuery(
+        // 1. Check Sunday
+        if (dayOfWeek === 0) {
+            const result: any = {};
+            for (const room of allRooms) {
+                result[room.id] = {};
+                for (const period of allPeriods) {
+                    result[room.id][period.code] = { status: 'CLOSED' };
+                }
+            }
+            res.json(result);
+            return;
+        }
+
+        // 2. Check Holiday
+        const holidays = await dbQuery('SELECT * FROM holidays WHERE date = ?', [dateStr]);
+        if (holidays.length > 0) {
+            const holiday = holidays[0];
+            const result: any = {};
+            for (const room of allRooms) {
+                result[room.id] = {};
+                for (const period of allPeriods) {
+                    result[room.id][period.code] = {
+                        status: 'HOLIDAY',
+                        holiday: { name: holiday.name }
+                    };
+                }
+            }
+            res.json(result);
+            return;
+        }
+
+        // 3. Fetch Blackouts and Bookings for this date
+        const dayBlackouts = await dbQuery('SELECT * FROM blackouts WHERE date = ?', [dateStr]);
+        const dayBookings = await dbQuery(
             'SELECT b.*, u.name as userName FROM bookings b LEFT JOIN users u ON b.userId = u.id WHERE b.date = ? AND b.status = ?', 
-            [date, 'CONFIRMED']
+            [dateStr, 'CONFIRMED']
         );
-        const blackouts = await dbQuery('SELECT * FROM blackouts WHERE date = ?', [date]);
-        const holidays = await dbQuery('SELECT * FROM holidays WHERE date = ?', [date]);
-        
-        res.json({
-            date,
-            isHoliday: holidays.length > 0,
-            holiday: holidays[0] || null,
-            rooms,
-            periods,
-            bookings,
-            blackouts
-        });
+
+        const result: any = {};
+        for (const room of allRooms) {
+            result[room.id] = {};
+            for (const period of allPeriods) {
+                // Check blackout
+                const blackout = dayBlackouts.find((b: any) =>
+                    (b.roomId === null || b.roomId === room.id) &&
+                    (b.periodId === null || b.periodId === period.id)
+                );
+
+                if (blackout) {
+                    result[room.id][period.code] = {
+                        status: 'BLACKOUT',
+                        blackout: { reason: blackout.reason, blockId: blackout.blockId }
+                    };
+                    continue;
+                }
+
+                // Check booking
+                const booking = dayBookings.find((b: any) =>
+                    b.roomId === room.id &&
+                    b.periodId === period.id
+                );
+
+                if (booking) {
+                    result[room.id][period.code] = {
+                        status: booking.userId === currentUserId ? 'MY_BOOKING' : 'BOOKED',
+                        booking: {
+                            id: booking.id,
+                            title: booking.title,
+                            user: { name: booking.userName }
+                        }
+                    };
+                } else {
+                    result[room.id][period.code] = { status: 'AVAILABLE' };
+                }
+            }
+        }
+        res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
