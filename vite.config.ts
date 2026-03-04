@@ -4,25 +4,35 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  const isProduction = mode === 'production';
+  
   return {
     server: {
-      port: 5173, // Move Frontend to 5173
+      port: 5173,
       host: '0.0.0.0',
       proxy: {
         '/api': {
-          target: 'http://localhost:3000', // Proxy API to Backend
+          target: 'http://localhost:3000',
           changeOrigin: true,
           secure: false,
         }
-      },
-      hmr: {
-        clientPort: 5173 // Force HMR on 5173
       }
     },
     plugins: [react()],
+    build: {
+      minify: 'esbuild',
+      sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor': ['react', 'react-dom', 'react-router-dom'],
+          }
+        }
+      },
+      chunkSizeWarningLimit: 300,
+    },
     define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+      'process.env': {}
     },
     resolve: {
       alias: {

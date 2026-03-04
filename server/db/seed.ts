@@ -5,17 +5,19 @@ import bcrypt from 'bcryptjs';
 const main = async () => {
     console.log('🌱 Seeding database...');
 
-    // Hash padrão para todas as senhas (mudrar em produção!)
-    const defaultPassword = await bcrypt.hash('password123', 10);
+    // Hash da senha padrão
+    const defaultPassword = 'password123';
+    const passwordHash = await bcrypt.hash(defaultPassword, 10);
+    console.log('Using password hash:', passwordHash);
 
     try {
         // Users
         console.log('Inserting users...');
         await db.insert(users).values([
-            { id: 'user-1', username: 'john.doe', name: 'John Doe', email: 'john@example.com', role: 'USER', photoUrl: 'https://i.pravatar.cc/150?u=user-1', isActive: true, passwordHash: defaultPassword },
-            { id: 'user-2', username: 'jane.admin', name: 'Jane Admin', email: 'jane@example.com', role: 'ADMIN', photoUrl: 'https://i.pravatar.cc/150?u=user-2', isActive: true, passwordHash: defaultPassword },
-            { id: 'user-3', username: 'inactive.user', name: 'Inactive User', email: 'inactive@example.com', role: 'USER', photoUrl: 'https://i.pravatar.cc/150?u=user-3', isActive: false, passwordHash: defaultPassword },
-            { id: 'user-4', username: 'mike.maintenance', name: 'Maintenance Mike', email: 'mike@example.com', role: 'MAINTENANCE', photoUrl: 'https://i.pravatar.cc/150?u=user-4', isActive: true, passwordHash: defaultPassword },
+            { id: 'user-1', username: 'john.doe', name: 'John Doe', email: 'john@example.com', role: 'USER', photoUrl: 'https://i.pravatar.cc/150?u=user-1', isActive: true, passwordHash: passwordHash },
+            { id: 'user-2', username: 'jane.admin', name: 'Jane Admin', email: 'jane@example.com', role: 'ADMIN', photoUrl: 'https://i.pravatar.cc/150?u=user-2', isActive: true, passwordHash: passwordHash },
+            { id: 'user-3', username: 'inactive.user', name: 'Inactive User', email: 'inactive@example.com', role: 'USER', photoUrl: 'https://i.pravatar.cc/150?u=user-3', isActive: false, passwordHash: passwordHash },
+            { id: 'user-4', username: 'mike.maintenance', name: 'Maintenance Mike', email: 'mike@example.com', role: 'MAINTENANCE', photoUrl: 'https://i.pravatar.cc/150?u=user-4', isActive: true, passwordHash: passwordHash },
         ]).onConflictDoNothing();
 
         // Locations

@@ -26,6 +26,10 @@
       "dest": "/api/index.ts"
     },
     {
+      "src": "/debug",
+      "dest": "/api/index.ts"
+    },
+    {
       "src": "/(.*)",
       "dest": "/dist/$1"
     }

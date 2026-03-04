@@ -2,17 +2,30 @@ import { formatToYyyyMmDd, addDays } from '../utils/date';
 import type { User, Room, Period, Booking, DayAvailability, Holiday, Blackout, AuditLog, DashboardStats, IssueReport, Location, RoomType } from '../types';
 import { IssueStatus as IssueStatusEnum } from '../types';
 
-// URL da API - usa variável de ambiente em produção
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// URL da API - usa variável de ambiente ou relativa em produção
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
+// Armazena token em memória
+let authToken: string | null = null;
+
+export const setAuthToken = (token: string | null) => {
+    authToken = token;
+};
 
 const fetchClient = async (path: string, options: RequestInit = {}) => {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string>),
+    };
+    
+    // Adiciona token no header Authorization se disponível
+    if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
     const response = await fetch(`${API_URL}${path}`, {
         ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
-        credentials: 'include', // Important for cookies
+        headers,
     });
 
     if (!response.ok) {

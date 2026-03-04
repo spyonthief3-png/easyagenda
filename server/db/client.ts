@@ -1,36 +1,44 @@
 // Database Client - Suporta SQLite local e Turso (libSQL) com Drizzle
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { createClient } from '@libsql/client';
+import Database from 'better-sqlite3';
 import * as schema from './schema';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 // Verifica se está em produção com Turso
 const useTurso = !!(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN);
 
-console.log('🔌 DB Config:', { useTurso, hasUrl: !!process.env.TURSO_DATABASE_URL, hasToken: !!process.env.TURSO_AUTH_TOKEN });
+console.log('🔌 DB Config:', { 
+    useTurso, 
+    hasUrl: !!process.env.TURSO_DATABASE_URL, 
+    hasToken: !!process.env.TURSO_AUTH_TOKEN, 
+    nodeEnv: process.env.NODE_ENV
+});
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let db: any;
+// Inicializa o db conforme o ambiente
+let dbInstance: ReturnType<typeof drizzle> | null = null;
 
-if (useTurso) {
-    // Produção: Turso (libSQL)
-    console.log('🔌 Conectando ao Turso...');
-    const client = createClient({
-        url: process.env.TURSO_DATABASE_URL!,
-        authToken: process.env.TURSO_AUTH_TOKEN,
-    });
+export function getDb() {
+    if (dbInstance) return dbInstance;
     
-    // Usar Drizzle com libSQL client
-    db = drizzle(client, { schema });
-} else {
-    // Desenvolvimento: SQLite local
-    console.log('🔌 Conectando ao SQLite local...');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const Database = require('better-sqlite3');
-    const sqlite = new Database('local.db');
-    db = drizzle(sqlite, { schema });
+    if (useTurso) {
+        // Produção: Turso (libSQL)
+        console.log('🔌 Conectando ao Turso...');
+        const client = createClient({
+            url: process.env.TURSO_DATABASE_URL!,
+            authToken: process.env.TURSO_AUTH_TOKEN,
+        });
+        
+        // @ts-ignore - tipos do drizzle não reconhecem libsql diretamente
+        dbInstance = drizzle(client, { schema });
+    } else {
+        // Desenvolvimento: SQLite local
+        console.log('🔌 Conectando ao SQLite local...');
+        const sqlite = new Database('local.db');
+        dbInstance = drizzle(sqlite, { schema });
+    }
+    
+    return dbInstance;
 }
 
-export { db };
+// Exporta db diretamente para compatibilidade com código existente
+export const db = getDb();
