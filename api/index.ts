@@ -240,7 +240,16 @@ app.get('/api/rooms', authenticate, async (req, res) => {
             LEFT JOIN locations l ON r.locationId = l.id 
             LEFT JOIN room_types rt ON r.roomTypeId = rt.id
         `);
-        res.json(rows);
+        
+        // Map to nested structure expected by frontend
+        const rooms = rows.map((r: any) => ({
+            ...r,
+            resources: typeof r.resources === 'string' ? JSON.parse(r.resources) : r.resources,
+            location: { id: r.locationId, name: r.locationName },
+            roomType: { id: r.roomTypeId, name: r.roomTypeName }
+        }));
+        
+        res.json(rooms);
     } catch (e: any) { console.error('Rooms error:', e); res.status(500).json({ error: e.message }); }
 });
 
@@ -252,8 +261,23 @@ app.post('/api/rooms', authenticate, ensureAdmin, async (req, res) => {
             'INSERT INTO rooms (id, name, locationId, roomTypeId, capacity, resources, isActive) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [id, name, locationId, roomTypeId, capacity || 10, JSON.stringify(resources || []), 1]
         );
-        const rows = await dbQuery('SELECT * FROM rooms WHERE id = ?', [id]);
-        res.json(rows[0]);
+        const rows = await dbQuery(`
+            SELECT r.*, l.name as locationName, rt.name as roomTypeName 
+            FROM rooms r 
+            LEFT JOIN locations l ON r.locationId = l.id 
+            LEFT JOIN room_types rt ON r.roomTypeId = rt.id
+            WHERE r.id = ?
+        `, [id]);
+        
+        const r: any = rows[0];
+        const room = {
+            ...r,
+            resources: typeof r.resources === 'string' ? JSON.parse(r.resources) : r.resources,
+            location: { id: r.locationId, name: r.locationName },
+            roomType: { id: r.roomTypeId, name: r.roomTypeName }
+        };
+        
+        res.json(room);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -264,8 +288,23 @@ app.put('/api/rooms/:id', authenticate, ensureAdmin, async (req, res) => {
             'UPDATE rooms SET name = ?, locationId = ?, roomTypeId = ?, capacity = ?, resources = ?, isActive = ? WHERE id = ?',
             [name, locationId, roomTypeId, capacity || 10, JSON.stringify(resources || []), isActive !== undefined ? (isActive ? 1 : 0) : 1, req.params.id]
         );
-        const rows = await dbQuery('SELECT * FROM rooms WHERE id = ?', [req.params.id]);
-        res.json(rows[0]);
+        const rows = await dbQuery(`
+            SELECT r.*, l.name as locationName, rt.name as roomTypeName 
+            FROM rooms r 
+            LEFT JOIN locations l ON r.locationId = l.id 
+            LEFT JOIN room_types rt ON r.roomTypeId = rt.id
+            WHERE r.id = ?
+        `, [req.params.id]);
+        
+        const r: any = rows[0];
+        const room = {
+            ...r,
+            resources: typeof r.resources === 'string' ? JSON.parse(r.resources) : r.resources,
+            location: { id: r.locationId, name: r.locationName },
+            roomType: { id: r.roomTypeId, name: r.roomTypeName }
+        };
+        
+        res.json(room);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -387,26 +426,76 @@ app.delete('/api/periods/:id', authenticate, ensureAdmin, async (req, res) => {
 app.get('/api/bookings', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery(`
-            SELECT b.*, r.name as roomName, u.name as userName, u.email as userEmail
+            SELECT b.*, 
+                   r.name as roomName, r.locationId, r.roomTypeId, r.capacity, r.resources, r.isActive as roomIsActive,
+                   l.name as locationName, 
+                   rt.name as roomTypeName,
+                   u.name as userName, u.email as userEmail,
+                   p.label as periodLabel, p.startTime as periodStartTime, p.endTime as periodEndTime, p.code as periodCode
             FROM bookings b
             LEFT JOIN rooms r ON b.roomId = r.id
+            LEFT JOIN locations l ON r.locationId = l.id
+            LEFT JOIN room_types rt ON r.roomTypeId = rt.id
             LEFT JOIN users u ON b.userId = u.id
+            LEFT JOIN periods p ON b.periodId = p.id
             ORDER BY b.date DESC
         `);
-        res.json(rows);
+        
+        const bookings = rows.map((b: any) => ({
+            ...b,
+            room: {
+                id: b.roomId,
+                name: b.roomName,
+                locationId: b.locationId,
+                roomTypeId: b.roomTypeId,
+                capacity: b.capacity,
+                resources: typeof b.resources === 'string' ? JSON.parse(b.resources) : b.resources,
+                isActive: b.roomIsActive,
+                location: { id: b.locationId, name: b.locationName },
+                roomType: { id: b.roomTypeId, name: b.roomTypeName }
+            },
+            user: { id: b.userId, name: b.userName, email: b.userEmail },
+            period: { id: b.periodId, code: b.periodCode, label: b.periodLabel, startTime: b.periodStartTime, endTime: b.periodEndTime }
+        }));
+        
+        res.json(bookings);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/bookings/my', authenticate, async (req: any, res) => {
     try {
         const rows = await dbQuery(`
-            SELECT b.*, r.name as roomName
+            SELECT b.*, 
+                   r.name as roomName, r.locationId, r.roomTypeId, r.capacity, r.resources, r.isActive as roomIsActive,
+                   l.name as locationName, 
+                   rt.name as roomTypeName,
+                   p.label as periodLabel, p.startTime as periodStartTime, p.endTime as periodEndTime, p.code as periodCode
             FROM bookings b
             LEFT JOIN rooms r ON b.roomId = r.id
+            LEFT JOIN locations l ON r.locationId = l.id
+            LEFT JOIN room_types rt ON r.roomTypeId = rt.id
+            LEFT JOIN periods p ON b.periodId = p.id
             WHERE b.userId = ?
             ORDER BY b.date DESC
         `, [req.user.id]);
-        res.json(rows);
+
+        const bookings = rows.map((b: any) => ({
+            ...b,
+            room: {
+                id: b.roomId,
+                name: b.roomName,
+                locationId: b.locationId,
+                roomTypeId: b.roomTypeId,
+                capacity: b.capacity,
+                resources: typeof b.resources === 'string' ? JSON.parse(b.resources) : b.resources,
+                isActive: b.roomIsActive,
+                location: { id: b.locationId, name: b.locationName },
+                roomType: { id: b.roomTypeId, name: b.roomTypeName }
+            },
+            period: { id: b.periodId, code: b.periodCode, label: b.periodLabel, startTime: b.periodStartTime, endTime: b.periodEndTime }
+        }));
+
+        res.json(bookings);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -490,7 +579,21 @@ app.get('/api/availability', authenticate, async (req, res) => {
         const { date } = req.query;
         if (!date) { res.status(400).json({ error: 'date query param required' }); return; }
         
-        const rooms = await dbQuery('SELECT * FROM rooms WHERE isActive = 1');
+        const rows = await dbQuery(`
+            SELECT r.*, l.name as locationName, rt.name as roomTypeName 
+            FROM rooms r 
+            LEFT JOIN locations l ON r.locationId = l.id 
+            LEFT JOIN room_types rt ON r.roomTypeId = rt.id
+            WHERE r.isActive = 1
+        `);
+
+        const rooms = rows.map((r: any) => ({
+            ...r,
+            resources: typeof r.resources === 'string' ? JSON.parse(r.resources) : r.resources,
+            location: { id: r.locationId, name: r.locationName },
+            roomType: { id: r.roomTypeId, name: r.roomTypeName }
+        }));
+
         const periods = await dbQuery('SELECT * FROM periods ORDER BY startTime');
         const bookings = await dbQuery(
             'SELECT b.*, u.name as userName FROM bookings b LEFT JOIN users u ON b.userId = u.id WHERE b.date = ? AND b.status = ?', 
@@ -592,24 +695,45 @@ app.get('/api/dashboard', authenticate, async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
         
-        const totalRooms = await dbQuery('SELECT COUNT(*) as count FROM rooms WHERE isActive = 1');
-        const todayBookings = await dbQuery('SELECT COUNT(*) as count FROM bookings WHERE date = ? AND status = ?', [today, 'CONFIRMED']);
-        const totalUsers = await dbQuery('SELECT COUNT(*) as count FROM users WHERE isActive = 1');
-        const weekBookings = await dbQuery(`
-            SELECT b.*, r.name as roomName, u.name as userName
+        const totalRoomsResult = await dbQuery('SELECT COUNT(*) as count FROM rooms WHERE isActive = 1');
+        const todayBookingsResult = await dbQuery('SELECT COUNT(*) as count FROM bookings WHERE date = ? AND status = ?', [today, 'CONFIRMED']);
+        const totalUsersResult = await dbQuery('SELECT COUNT(*) as count FROM users WHERE isActive = 1');
+        
+        const weekBookingsRows = await dbQuery(`
+            SELECT b.*, 
+                   r.name as roomName, r.locationId, r.roomTypeId,
+                   l.name as locationName, 
+                   rt.name as roomTypeName,
+                   u.name as userName,
+                   p.label as periodLabel, p.startTime as periodStartTime, p.endTime as periodEndTime
             FROM bookings b
             LEFT JOIN rooms r ON b.roomId = r.id
+            LEFT JOIN locations l ON r.locationId = l.id
+            LEFT JOIN room_types rt ON r.roomTypeId = rt.id
             LEFT JOIN users u ON b.userId = u.id
+            LEFT JOIN periods p ON b.periodId = p.id
             WHERE b.date >= ? AND b.status = ?
             ORDER BY b.date ASC
             LIMIT 10
         `, [today, 'CONFIRMED']);
+
+        const upcomingBookings = weekBookingsRows.map((b: any) => ({
+            ...b,
+            room: {
+                id: b.roomId,
+                name: b.roomName,
+                location: { id: b.locationId, name: b.locationName },
+                roomType: { id: b.roomTypeId, name: b.roomTypeName }
+            },
+            user: { id: b.userId, name: b.userName },
+            period: { id: b.periodId, label: b.periodLabel, startTime: b.periodStartTime, endTime: b.periodEndTime }
+        }));
         
         res.json({
-            totalRooms: totalRooms[0]?.count || 0,
-            todayBookings: todayBookings[0]?.count || 0,
-            totalUsers: totalUsers[0]?.count || 0,
-            upcomingBookings: weekBookings
+            totalRooms: totalRoomsResult[0]?.count || 0,
+            todayBookings: todayBookingsResult[0]?.count || 0,
+            totalUsers: totalUsersResult[0]?.count || 0,
+            upcomingBookings
         });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -633,16 +757,36 @@ app.get('/api/dashboard/upcoming', authenticate, async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
         const rows = await dbQuery(`
-            SELECT b.*, r.name as roomName, u.name as userName
+            SELECT b.*, 
+                   r.name as roomName, r.locationId, r.roomTypeId,
+                   l.name as locationName, 
+                   rt.name as roomTypeName,
+                   u.name as userName,
+                   p.label as periodLabel, p.startTime as periodStartTime, p.endTime as periodEndTime
             FROM bookings b
             LEFT JOIN rooms r ON b.roomId = r.id
+            LEFT JOIN locations l ON r.locationId = l.id
+            LEFT JOIN room_types rt ON r.roomTypeId = rt.id
             LEFT JOIN users u ON b.userId = u.id
+            LEFT JOIN periods p ON b.periodId = p.id
             WHERE b.date >= ? AND b.status = ?
             ORDER BY b.date ASC
             LIMIT 10
         `, [today, 'CONFIRMED']);
         
-        res.json(rows);
+        const upcomingBookings = rows.map((b: any) => ({
+            ...b,
+            room: {
+                id: b.roomId,
+                name: b.roomName,
+                location: { id: b.locationId, name: b.locationName },
+                roomType: { id: b.roomTypeId, name: b.roomTypeName }
+            },
+            user: { id: b.userId, name: b.userName },
+            period: { id: b.periodId, label: b.periodLabel, startTime: b.periodStartTime, endTime: b.periodEndTime }
+        }));
+
+        res.json(upcomingBookings);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -652,9 +796,15 @@ app.get('/api/issues', authenticate, async (req, res) => {
     try {
         const { status } = req.query;
         let query = `
-            SELECT i.*, r.name as roomName, u.name as userName
+            SELECT i.*, 
+                   r.name as roomName, r.locationId, r.roomTypeId,
+                   l.name as locationName, 
+                   rt.name as roomTypeName,
+                   u.name as userName, u.email as userEmail
             FROM issue_reports i
             LEFT JOIN rooms r ON i.roomId = r.id
+            LEFT JOIN locations l ON r.locationId = l.id
+            LEFT JOIN room_types rt ON r.roomTypeId = rt.id
             LEFT JOIN users u ON i.userId = u.id
         `;
         const params: any[] = [];
@@ -665,7 +815,18 @@ app.get('/api/issues', authenticate, async (req, res) => {
         query += ' ORDER BY i.createdAt DESC';
         
         const rows = await dbQuery(query, params);
-        res.json(rows);
+        const issues = rows.map((i: any) => ({
+            ...i,
+            room: {
+                id: i.roomId,
+                name: i.roomName,
+                location: { id: i.locationId, name: i.locationName },
+                roomType: { id: i.roomTypeId, name: i.roomTypeName }
+            },
+            user: { id: i.userId, name: i.userName, email: i.userEmail }
+        }));
+        
+        res.json(issues);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
