@@ -17,7 +17,7 @@ const Header: React.FC = () => {
         setIsMobileMenuOpen(false);
         navigate('/login');
     };
-    
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
@@ -37,36 +37,36 @@ const Header: React.FC = () => {
 
     const navLinks = (
         <>
-            <NavLink to="/" end className={({isActive}) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
+            <NavLink to="/" end className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
                 Agendar Sala
             </NavLink>
-            <NavLink to="/find-slot" className={({isActive}) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
+            <NavLink to="/find-slot" className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
                 Encontrar Horário
             </NavLink>
-            <NavLink to="/my-bookings" className={({isActive}) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
+            <NavLink to="/my-bookings" className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
                 Minhas Reservas
             </NavLink>
             {user?.role === ROLE.ADMIN && (
-                <NavLink to="/admin" className={({isActive}) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
+                <NavLink to="/admin" className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
                     Admin
                 </NavLink>
             )}
         </>
     );
-    
+
     const mobileNavLinks = (
         <>
-            <NavLink to="/" end className={({isActive}) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
+            <NavLink to="/" end className={({ isActive }) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
                 Agendar Sala
             </NavLink>
-            <NavLink to="/find-slot" className={({isActive}) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
+            <NavLink to="/find-slot" className={({ isActive }) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
                 Encontrar Horário
             </NavLink>
-            <NavLink to="/my-bookings" className={({isActive}) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
+            <NavLink to="/my-bookings" className={({ isActive }) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
                 Minhas Reservas
             </NavLink>
             {user?.role === ROLE.ADMIN && (
-                <NavLink to="/admin" className={({isActive}) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
+                <NavLink to="/admin" className={({ isActive }) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
                     Admin
                 </NavLink>
             )}
@@ -75,10 +75,10 @@ const Header: React.FC = () => {
 
     const maintenanceNavLinks = (
         <>
-            <NavLink to="/maintenance/issues" className={({isActive}) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
+            <NavLink to="/maintenance/issues" className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
                 Chamados
             </NavLink>
-            <NavLink to="/maintenance/blocks" className={({isActive}) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
+            <NavLink to="/maintenance/blocks" className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}`} onClick={() => setIsMobileMenuOpen(false)}>
                 Bloquear Salas
             </NavLink>
         </>
@@ -86,10 +86,10 @@ const Header: React.FC = () => {
 
     const maintenanceMobileNavLinks = (
         <>
-            <NavLink to="/maintenance/issues" className={({isActive}) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
+            <NavLink to="/maintenance/issues" className={({ isActive }) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
                 Chamados
             </NavLink>
-            <NavLink to="/maintenance/blocks" className={({isActive}) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
+            <NavLink to="/maintenance/blocks" className={({ isActive }) => `${mobileLinkClasses} ${isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => setIsMobileMenuOpen(false)}>
                 Bloquear Salas
             </NavLink>
         </>
@@ -107,12 +107,12 @@ const Header: React.FC = () => {
             <div className="max-w-7xl mx-auto px-4">
                 <div className="flex items-center justify-between h-16">
                     <Link to="/" className="flex items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
-                        <img src="https://raw.githubusercontent.com/StackBlitz/stackblitz-images/main/easyagenda-logo.png" alt="EasyAgenda" className="h-10 w-auto object-contain brightness-0 invert" />
+                        <img src="/EasyAgenda.png" alt="EasyAgenda" className="h-10 w-auto object-contain brightness-0 invert" />
                         <span className="text-white text-xl font-bold tracking-tight hidden sm:block">
                             EasyAgenda
                         </span>
                     </Link>
-                    
+
                     <nav className="hidden md:flex items-center space-x-2 lg:space-x-4">
                         {isAuthenticated && user && (
                             <>
@@ -139,7 +139,7 @@ const Header: React.FC = () => {
                             </>
                         )}
                     </nav>
-                    
+
                     <div className="md:hidden">
                         {isAuthenticated && (
                             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-300 hover:text-white focus:outline-none focus:text-white p-2 rounded-lg hover:bg-gray-700 transition-colors" aria-label="Abrir menu">
