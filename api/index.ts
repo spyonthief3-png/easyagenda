@@ -75,7 +75,9 @@ async function dbRun(sql: string, params: any[] = []) {
     await client.execute({ sql, args: params });
 }
 
-// ==================== MIDDLEWARE ====================\n\nfunction authenticate(req: any, res: any, next: any) {
+// ==================== MIDDLEWARE ====================
+
+function authenticate(req: any, res: any, next: any) {
     const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token;
     
     if (!token) {
@@ -108,7 +110,9 @@ function ensureMaintenanceOrAdmin(req: any, res: any, next: any) {
     next();
 }
 
-// ==================== ROTAS ====================\n\n// Health Check
+// ==================== ROTAS ====================
+
+// Health Check
 app.get('/health', async (req, res) => {
     try {
         await dbQuery('SELECT 1');
@@ -118,7 +122,9 @@ app.get('/health', async (req, res) => {
     }
 });
 
-// ==================== AUTH ====================\n\napp.post('/api/auth/login', async (req, res) => {
+// ==================== AUTH ====================
+
+app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         
@@ -160,7 +166,9 @@ app.post('/api/auth/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// ==================== LOCATIONS ====================\n\napp.get('/api/locations', authenticate, async (req, res) => {
+// ==================== LOCATIONS ====================
+
+app.get('/api/locations', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery('SELECT * FROM locations');
         res.json(rows);
@@ -190,7 +198,9 @@ app.delete('/api/locations/:id', authenticate, ensureAdmin, async (req, res) => 
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== ROOM TYPES ====================\n\napp.get('/api/room-types', authenticate, async (req, res) => {
+// ==================== ROOM TYPES ====================
+
+app.get('/api/room-types', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery('SELECT * FROM room_types');
         res.json(rows);
@@ -220,7 +230,9 @@ app.delete('/api/room-types/:id', authenticate, ensureAdmin, async (req, res) =>
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== ROOMS ====================\n\napp.get('/api/rooms', authenticate, async (req, res) => {
+// ==================== ROOMS ====================
+
+app.get('/api/rooms', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery(`
             SELECT r.*, l.name as locationName, rt.name as roomTypeName 
@@ -264,7 +276,9 @@ app.delete('/api/rooms/:id', authenticate, ensureAdmin, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== USERS ====================\n\napp.get('/api/users', authenticate, ensureAdmin, async (req, res) => {
+// ==================== USERS ====================
+
+app.get('/api/users', authenticate, ensureAdmin, async (req, res) => {
     try {
         const rows = await dbQuery('SELECT id, name, email, role, isActive FROM users');
         res.json(rows);
@@ -318,7 +332,9 @@ app.put('/api/users/:id/password', authenticate, async (req: any, res) => {
         if (!users[0]) { res.status(404).json({ error: 'User not found' }); return; }
         
         // Only self or admin
-        if (req.user.id !== req.params.id && req.user.role !== 'ADMIN') {\n            res.status(403).json({ error: 'Forbidden' }); return;\n        }
+        if (req.user.id !== req.params.id && req.user.role !== 'ADMIN') {
+            res.status(403).json({ error: 'Forbidden' }); return;
+        }
         
         if (!await bcrypt.compare(oldPass, String(users[0].passwordHash))) {
             res.status(400).json({ error: 'Senha atual incorreta' }); return;
@@ -330,7 +346,9 @@ app.put('/api/users/:id/password', authenticate, async (req: any, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== PERIODS ====================\n\napp.get('/api/periods', authenticate, async (req, res) => {
+// ==================== PERIODS ====================
+
+app.get('/api/periods', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery('SELECT * FROM periods ORDER BY startTime');
         res.json(rows);
@@ -364,7 +382,9 @@ app.delete('/api/periods/:id', authenticate, ensureAdmin, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== BOOKINGS ====================\n\napp.get('/api/bookings', authenticate, async (req, res) => {
+// ==================== BOOKINGS ====================
+
+app.get('/api/bookings', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery(`
             SELECT b.*, r.name as roomName, u.name as userName, u.email as userEmail
@@ -435,7 +455,11 @@ app.put('/api/bookings/:id', authenticate, async (req: any, res) => {
         const current = await dbQuery('SELECT * FROM bookings WHERE id = ?', [req.params.id]);
         if (!current[0]) {
             res.status(404).json({ error: 'Booking not found' }); return;
-        }\n        \n        if (current[0].userId !== req.user.id && req.user.role !== 'ADMIN') {\n            res.status(403).json({ error: 'Forbidden' }); return;\n        }
+        }
+        
+        if (current[0].userId !== req.user.id && req.user.role !== 'ADMIN') {
+            res.status(403).json({ error: 'Forbidden' }); return;
+        }
         
         await dbRun('UPDATE bookings SET status = ?, notes = ? WHERE id = ?', [status, notes || '', req.params.id]);
         const rows = await dbQuery('SELECT * FROM bookings WHERE id = ?', [req.params.id]);
@@ -459,14 +483,19 @@ app.delete('/api/bookings/:id', authenticate, async (req: any, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== AVAILABILITY ====================\n\napp.get('/api/availability', authenticate, async (req, res) => {
+// ==================== AVAILABILITY ====================
+
+app.get('/api/availability', authenticate, async (req, res) => {
     try {
         const { date } = req.query;
         if (!date) { res.status(400).json({ error: 'date query param required' }); return; }
         
         const rooms = await dbQuery('SELECT * FROM rooms WHERE isActive = 1');
         const periods = await dbQuery('SELECT * FROM periods ORDER BY startTime');
-        const bookings = await dbQuery(\n            'SELECT b.*, u.name as userName FROM bookings b LEFT JOIN users u ON b.userId = u.id WHERE b.date = ? AND b.status = ?', \n            [date, 'CONFIRMED']\n        );
+        const bookings = await dbQuery(
+            'SELECT b.*, u.name as userName FROM bookings b LEFT JOIN users u ON b.userId = u.id WHERE b.date = ? AND b.status = ?', 
+            [date, 'CONFIRMED']
+        );
         const blackouts = await dbQuery('SELECT * FROM blackouts WHERE date = ?', [date]);
         const holidays = await dbQuery('SELECT * FROM holidays WHERE date = ?', [date]);
         
@@ -482,7 +511,9 @@ app.delete('/api/bookings/:id', authenticate, async (req: any, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== HOLIDAYS ====================\n\napp.get('/api/holidays', authenticate, async (req, res) => {
+// ==================== HOLIDAYS ====================
+
+app.get('/api/holidays', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery('SELECT * FROM holidays');
         res.json(rows);
@@ -505,7 +536,9 @@ app.delete('/api/holidays/:id', authenticate, ensureAdmin, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== BLACKOUTS ====================\n\napp.get('/api/blackouts', authenticate, async (req, res) => {
+// ==================== BLACKOUTS ====================
+
+app.get('/api/blackouts', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery('SELECT * FROM blackouts');
         res.json(rows);
@@ -553,7 +586,9 @@ app.delete('/api/blackouts/range/:blockId', authenticate, ensureAdmin, async (re
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== DASHBOARD ====================\n\napp.get('/api/dashboard', authenticate, async (req, res) => {
+// ==================== DASHBOARD ====================
+
+app.get('/api/dashboard', authenticate, async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
         
@@ -611,9 +646,12 @@ app.get('/api/dashboard/upcoming', authenticate, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== ISSUES ====================\n\napp.get('/api/issues', authenticate, async (req, res) => {
+// ==================== ISSUES ====================
+
+app.get('/api/issues', authenticate, async (req, res) => {
     try {
-        const { status } = req.query;\n        let query = `
+        const { status } = req.query;
+        let query = `
             SELECT i.*, r.name as roomName, u.name as userName
             FROM issue_reports i
             LEFT JOIN rooms r ON i.roomId = r.id
@@ -654,14 +692,17 @@ app.put('/api/issues/:id', authenticate, ensureMaintenanceOrAdmin, async (req, r
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== AUDIT LOGS ====================\n\napp.get('/api/audit-logs', authenticate, ensureAdmin, async (req, res) => {
+// ==================== AUDIT LOGS ====================
+
+app.get('/api/audit-logs', authenticate, ensureAdmin, async (req, res) => {
     try {
         const rows = await dbQuery(`
             SELECT al.*, u.name as actorNameCurrent
             FROM audit_logs al
             LEFT JOIN users u ON al.actorId = u.id
             ORDER BY al.createdAt DESC
-            LIMIT 100\n        `);
+            LIMIT 100
+        `);
         res.json(rows);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
