@@ -75,9 +75,7 @@ async function dbRun(sql: string, params: any[] = []) {
     await client.execute({ sql, args: params });
 }
 
-// ==================== MIDDLEWARE ====================
-
-function authenticate(req: any, res: any, next: any) {
+// ==================== MIDDLEWARE ====================\n\nfunction authenticate(req: any, res: any, next: any) {
     const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token;
     
     if (!token) {
@@ -110,18 +108,7 @@ function ensureMaintenanceOrAdmin(req: any, res: any, next: any) {
     next();
 }
 
-// ==================== ROTAS ====================
-
-// Debug endpoint
-app.get('/debug', async (req, res) => {
-    const dbUrl = process.env.TURSO_DATABASE_URL || process.env.EASYAGENDA_TURSO_DATABASE_URL || process.env.easyagenda_TURSO_DATABASE_URL;
-    res.json({ 
-        status: 'ok',
-        env: { TURSO_URL: !!dbUrl, urlPreview: dbUrl?.substring(0, 30) }
-    });
-});
-
-// Health Check
+// ==================== ROTAS ====================\n\n// Health Check
 app.get('/health', async (req, res) => {
     try {
         await dbQuery('SELECT 1');
@@ -131,16 +118,14 @@ app.get('/health', async (req, res) => {
     }
 });
 
-// ==================== AUTH ====================
-
-app.post('/api/auth/login', async (req, res) => {
+// ==================== AUTH ====================\n\napp.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         
         const users = await dbQuery('SELECT * FROM users WHERE username = ? OR email = ?', [email, email]);
         const user = users[0];
         
-        if (!user || !await bcrypt.compare(password, String(user.password_hash))) {
+        if (!user || !user.passwordHash || !await bcrypt.compare(password, String(user.passwordHash))) {
             res.status(401).json({ error: 'Email ou senha incorretos' });
             return;
         }
@@ -175,9 +160,7 @@ app.post('/api/auth/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// ==================== LOCATIONS ====================
-
-app.get('/api/locations', authenticate, async (req, res) => {
+// ==================== LOCATIONS ====================\n\napp.get('/api/locations', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery('SELECT * FROM locations');
         res.json(rows);
@@ -207,9 +190,7 @@ app.delete('/api/locations/:id', authenticate, ensureAdmin, async (req, res) => 
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== ROOM TYPES ====================
-
-app.get('/api/room-types', authenticate, async (req, res) => {
+// ==================== ROOM TYPES ====================\n\napp.get('/api/room-types', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery('SELECT * FROM room_types');
         res.json(rows);
@@ -239,15 +220,13 @@ app.delete('/api/room-types/:id', authenticate, ensureAdmin, async (req, res) =>
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== ROOMS ====================
-
-app.get('/api/rooms', authenticate, async (req, res) => {
+// ==================== ROOMS ====================\n\napp.get('/api/rooms', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery(`
-            SELECT r.*, l.name as location_name, rt.name as room_type_name 
+            SELECT r.*, l.name as locationName, rt.name as roomTypeName 
             FROM rooms r 
-            LEFT JOIN locations l ON r.location_id = l.id 
-            LEFT JOIN room_types rt ON r.room_type_id = rt.id
+            LEFT JOIN locations l ON r.locationId = l.id 
+            LEFT JOIN room_types rt ON r.roomTypeId = rt.id
         `);
         res.json(rows);
     } catch (e: any) { console.error('Rooms error:', e); res.status(500).json({ error: e.message }); }
@@ -258,7 +237,7 @@ app.post('/api/rooms', authenticate, ensureAdmin, async (req, res) => {
         const id = createId();
         const { name, locationId, roomTypeId, capacity, resources } = req.body;
         await dbRun(
-            'INSERT INTO rooms (id, name, location_id, room_type_id, capacity, resources, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO rooms (id, name, locationId, roomTypeId, capacity, resources, isActive) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [id, name, locationId, roomTypeId, capacity || 10, JSON.stringify(resources || []), 1]
         );
         const rows = await dbQuery('SELECT * FROM rooms WHERE id = ?', [id]);
@@ -270,7 +249,7 @@ app.put('/api/rooms/:id', authenticate, ensureAdmin, async (req, res) => {
     try {
         const { name, locationId, roomTypeId, capacity, resources, isActive } = req.body;
         await dbRun(
-            'UPDATE rooms SET name = ?, location_id = ?, room_type_id = ?, capacity = ?, resources = ?, is_active = ? WHERE id = ?',
+            'UPDATE rooms SET name = ?, locationId = ?, roomTypeId = ?, capacity = ?, resources = ?, isActive = ? WHERE id = ?',
             [name, locationId, roomTypeId, capacity || 10, JSON.stringify(resources || []), isActive !== undefined ? (isActive ? 1 : 0) : 1, req.params.id]
         );
         const rows = await dbQuery('SELECT * FROM rooms WHERE id = ?', [req.params.id]);
@@ -285,12 +264,10 @@ app.delete('/api/rooms/:id', authenticate, ensureAdmin, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== USERS ====================
-
-app.get('/api/users', authenticate, ensureAdmin, async (req, res) => {
+// ==================== USERS ====================\n\napp.get('/api/users', authenticate, ensureAdmin, async (req, res) => {
     try {
-        const rows = await dbQuery('SELECT id, name, email, role, is_active FROM users');
-        res.json(rows.map((u: any) => ({ ...u, isActive: u.is_active })));
+        const rows = await dbQuery('SELECT id, name, email, role, isActive FROM users');
+        res.json(rows);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -300,7 +277,7 @@ app.post('/api/users', authenticate, ensureAdmin, async (req, res) => {
         const { name, email, password, role } = req.body;
         const hashedPassword = await bcrypt.hash(password, 10);
         await dbRun(
-            'INSERT INTO users (id, username, name, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO users (id, username, name, email, passwordHash, role, isActive) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [id, email, name, email, hashedPassword, role || 'USER', 1]
         );
         res.json({ id, name, email, role: role || 'USER' });
@@ -313,16 +290,16 @@ app.put('/api/users/:id', authenticate, ensureAdmin, async (req, res) => {
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
             await dbRun(
-                'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, is_active = ? WHERE id = ?',
+                'UPDATE users SET name = ?, email = ?, passwordHash = ?, role = ?, isActive = ? WHERE id = ?',
                 [name, email, hashedPassword, role, isActive !== undefined ? (isActive ? 1 : 0) : 1, req.params.id]
             );
         } else {
             await dbRun(
-                'UPDATE users SET name = ?, email = ?, role = ?, is_active = ? WHERE id = ?',
+                'UPDATE users SET name = ?, email = ?, role = ?, isActive = ? WHERE id = ?',
                 [name, email, role, isActive !== undefined ? (isActive ? 1 : 0) : 1, req.params.id]
             );
         }
-        const rows = await dbQuery('SELECT id, name, email, role, is_active FROM users WHERE id = ?', [req.params.id]);
+        const rows = await dbQuery('SELECT id, name, email, role, isActive FROM users WHERE id = ?', [req.params.id]);
         res.json(rows[0]);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -341,34 +318,30 @@ app.put('/api/users/:id/password', authenticate, async (req: any, res) => {
         if (!users[0]) { res.status(404).json({ error: 'User not found' }); return; }
         
         // Only self or admin
-        if (req.user.id !== req.params.id && req.user.role !== 'ADMIN') {
-            res.status(403).json({ error: 'Forbidden' }); return;
-        }
+        if (req.user.id !== req.params.id && req.user.role !== 'ADMIN') {\n            res.status(403).json({ error: 'Forbidden' }); return;\n        }
         
-        if (!await bcrypt.compare(oldPass, String(users[0].password_hash))) {
+        if (!await bcrypt.compare(oldPass, String(users[0].passwordHash))) {
             res.status(400).json({ error: 'Senha atual incorreta' }); return;
         }
         
         const hashed = await bcrypt.hash(newPass, 10);
-        await dbRun('UPDATE users SET password_hash = ? WHERE id = ?', [hashed, req.params.id]);
+        await dbRun('UPDATE users SET passwordHash = ? WHERE id = ?', [hashed, req.params.id]);
         res.json({ success: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== PERIODS ====================
-
-app.get('/api/periods', authenticate, async (req, res) => {
+// ==================== PERIODS ====================\n\napp.get('/api/periods', authenticate, async (req, res) => {
     try {
-        const rows = await dbQuery('SELECT * FROM periods ORDER BY start_time');
+        const rows = await dbQuery('SELECT * FROM periods ORDER BY startTime');
         res.json(rows);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/periods', authenticate, ensureAdmin, async (req, res) => {
     try {
-        const { code, name, label, start_time, end_time } = req.body;
-        await dbRun('INSERT INTO periods (code, label, start_time, end_time) VALUES (?, ?, ?, ?)', 
-            [code || name, label || name, start_time, end_time]);
+        const { code, name, label, startTime, endTime } = req.body;
+        await dbRun('INSERT INTO periods (code, label, startTime, endTime) VALUES (?, ?, ?, ?)', 
+            [code || name, label || name, startTime, endTime]);
         const rows = await dbQuery('SELECT * FROM periods ORDER BY id DESC LIMIT 1');
         res.json(rows[0]);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -376,9 +349,9 @@ app.post('/api/periods', authenticate, ensureAdmin, async (req, res) => {
 
 app.put('/api/periods/:id', authenticate, ensureAdmin, async (req, res) => {
     try {
-        const { code, name, label, start_time, end_time } = req.body;
-        await dbRun('UPDATE periods SET code = ?, label = ?, start_time = ?, end_time = ? WHERE id = ?', 
-            [code || name, label || name, start_time, end_time, req.params.id]);
+        const { code, name, label, startTime, endTime } = req.body;
+        await dbRun('UPDATE periods SET code = ?, label = ?, startTime = ?, endTime = ? WHERE id = ?', 
+            [code || name, label || name, startTime, endTime, req.params.id]);
         const rows = await dbQuery('SELECT * FROM periods WHERE id = ?', [req.params.id]);
         res.json(rows[0]);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -391,15 +364,13 @@ app.delete('/api/periods/:id', authenticate, ensureAdmin, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== BOOKINGS ====================
-
-app.get('/api/bookings', authenticate, async (req, res) => {
+// ==================== BOOKINGS ====================\n\napp.get('/api/bookings', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery(`
-            SELECT b.*, r.name as room_name, u.name as user_name, u.email as user_email
+            SELECT b.*, r.name as roomName, u.name as userName, u.email as userEmail
             FROM bookings b
-            LEFT JOIN rooms r ON b.room_id = r.id
-            LEFT JOIN users u ON b.user_id = u.id
+            LEFT JOIN rooms r ON b.roomId = r.id
+            LEFT JOIN users u ON b.userId = u.id
             ORDER BY b.date DESC
         `);
         res.json(rows);
@@ -409,10 +380,10 @@ app.get('/api/bookings', authenticate, async (req, res) => {
 app.get('/api/bookings/my', authenticate, async (req: any, res) => {
     try {
         const rows = await dbQuery(`
-            SELECT b.*, r.name as room_name
+            SELECT b.*, r.name as roomName
             FROM bookings b
-            LEFT JOIN rooms r ON b.room_id = r.id
-            WHERE b.user_id = ?
+            LEFT JOIN rooms r ON b.roomId = r.id
+            WHERE b.userId = ?
             ORDER BY b.date DESC
         `, [req.user.id]);
         res.json(rows);
@@ -432,7 +403,7 @@ app.post('/api/bookings', authenticate, async (req: any, res) => {
         
         // Check for conflicts
         const conflicts = await dbQuery(
-            'SELECT * FROM bookings WHERE room_id = ? AND date = ? AND period_id = ? AND status = ?',
+            'SELECT * FROM bookings WHERE roomId = ? AND date = ? AND periodId = ? AND status = ?',
             [roomId, date, resolvedPeriodId, 'CONFIRMED']
         );
         
@@ -443,14 +414,14 @@ app.post('/api/bookings', authenticate, async (req: any, res) => {
         
         const id = createId();
         await dbRun(
-            'INSERT INTO bookings (id, user_id, room_id, date, period_id, title, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO bookings (id, userId, roomId, date, periodId, title, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
             [id, req.user.id, roomId, date, resolvedPeriodId, title || 'Reserva', notes || '', 'CONFIRMED']
         );
         
         const rows = await dbQuery(`
-            SELECT b.*, r.name as room_name 
+            SELECT b.*, r.name as roomName 
             FROM bookings b 
-            LEFT JOIN rooms r ON b.room_id = r.id 
+            LEFT JOIN rooms r ON b.roomId = r.id 
             WHERE b.id = ?
         `, [id]);
         res.json(rows[0]);
@@ -464,11 +435,7 @@ app.put('/api/bookings/:id', authenticate, async (req: any, res) => {
         const current = await dbQuery('SELECT * FROM bookings WHERE id = ?', [req.params.id]);
         if (!current[0]) {
             res.status(404).json({ error: 'Booking not found' }); return;
-        }
-        
-        if (current[0].user_id !== req.user.id && req.user.role !== 'ADMIN') {
-            res.status(403).json({ error: 'Forbidden' }); return;
-        }
+        }\n        \n        if (current[0].userId !== req.user.id && req.user.role !== 'ADMIN') {\n            res.status(403).json({ error: 'Forbidden' }); return;\n        }
         
         await dbRun('UPDATE bookings SET status = ?, notes = ? WHERE id = ?', [status, notes || '', req.params.id]);
         const rows = await dbQuery('SELECT * FROM bookings WHERE id = ?', [req.params.id]);
@@ -483,7 +450,7 @@ app.delete('/api/bookings/:id', authenticate, async (req: any, res) => {
             res.status(404).json({ error: 'Booking not found' }); return;
         }
         
-        if (current[0].user_id !== req.user.id && req.user.role !== 'ADMIN') {
+        if (current[0].userId !== req.user.id && req.user.role !== 'ADMIN') {
             res.status(403).json({ error: 'Forbidden' }); return;
         }
         
@@ -492,19 +459,14 @@ app.delete('/api/bookings/:id', authenticate, async (req: any, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== AVAILABILITY ====================
-
-app.get('/api/availability', authenticate, async (req, res) => {
+// ==================== AVAILABILITY ====================\n\napp.get('/api/availability', authenticate, async (req, res) => {
     try {
         const { date } = req.query;
         if (!date) { res.status(400).json({ error: 'date query param required' }); return; }
         
-        const rooms = await dbQuery('SELECT * FROM rooms WHERE is_active = 1');
-        const periods = await dbQuery('SELECT * FROM periods ORDER BY start_time');
-        const bookings = await dbQuery(
-            'SELECT b.*, u.name as user_name FROM bookings b LEFT JOIN users u ON b.user_id = u.id WHERE b.date = ? AND b.status = ?', 
-            [date, 'CONFIRMED']
-        );
+        const rooms = await dbQuery('SELECT * FROM rooms WHERE isActive = 1');
+        const periods = await dbQuery('SELECT * FROM periods ORDER BY startTime');
+        const bookings = await dbQuery(\n            'SELECT b.*, u.name as userName FROM bookings b LEFT JOIN users u ON b.userId = u.id WHERE b.date = ? AND b.status = ?', \n            [date, 'CONFIRMED']\n        );
         const blackouts = await dbQuery('SELECT * FROM blackouts WHERE date = ?', [date]);
         const holidays = await dbQuery('SELECT * FROM holidays WHERE date = ?', [date]);
         
@@ -520,9 +482,7 @@ app.get('/api/availability', authenticate, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== HOLIDAYS ====================
-
-app.get('/api/holidays', authenticate, async (req, res) => {
+// ==================== HOLIDAYS ====================\n\napp.get('/api/holidays', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery('SELECT * FROM holidays');
         res.json(rows);
@@ -545,9 +505,7 @@ app.delete('/api/holidays/:id', authenticate, ensureAdmin, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== BLACKOUTS ====================
-
-app.get('/api/blackouts', authenticate, async (req, res) => {
+// ==================== BLACKOUTS ====================\n\napp.get('/api/blackouts', authenticate, async (req, res) => {
     try {
         const rows = await dbQuery('SELECT * FROM blackouts');
         res.json(rows);
@@ -558,7 +516,7 @@ app.post('/api/blackouts', authenticate, ensureAdmin, async (req, res) => {
     try {
         const id = createId();
         const { date, periodId, roomId, reason } = req.body;
-        await dbRun('INSERT INTO blackouts (id, date, period_id, room_id, reason) VALUES (?, ?, ?, ?, ?)',
+        await dbRun('INSERT INTO blackouts (id, date, periodId, roomId, reason) VALUES (?, ?, ?, ?, ?)',
             [id, date, periodId || null, roomId || null, reason]);
         res.json({ id, date, periodId, roomId, reason });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -574,7 +532,7 @@ app.post('/api/blackouts/range', authenticate, ensureAdmin, async (req, res) => 
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
             const dateStr = d.toISOString().split('T')[0];
             const id = createId();
-            await dbRun('INSERT INTO blackouts (id, date, room_id, reason, block_id) VALUES (?, ?, ?, ?, ?)',
+            await dbRun('INSERT INTO blackouts (id, date, roomId, reason, blockId) VALUES (?, ?, ?, ?, ?)',
                 [id, dateStr, roomId || null, reason, blockId]);
         }
         res.json({ success: true, blockId });
@@ -590,25 +548,23 @@ app.delete('/api/blackouts/:id', authenticate, ensureAdmin, async (req, res) => 
 
 app.delete('/api/blackouts/range/:blockId', authenticate, ensureAdmin, async (req, res) => {
     try {
-        await dbRun('DELETE FROM blackouts WHERE block_id = ?', [req.params.blockId]);
+        await dbRun('DELETE FROM blackouts WHERE blockId = ?', [req.params.blockId]);
         res.json({ success: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== DASHBOARD ====================
-
-app.get('/api/dashboard', authenticate, async (req, res) => {
+// ==================== DASHBOARD ====================\n\napp.get('/api/dashboard', authenticate, async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
         
-        const totalRooms = await dbQuery('SELECT COUNT(*) as count FROM rooms WHERE is_active = 1');
+        const totalRooms = await dbQuery('SELECT COUNT(*) as count FROM rooms WHERE isActive = 1');
         const todayBookings = await dbQuery('SELECT COUNT(*) as count FROM bookings WHERE date = ? AND status = ?', [today, 'CONFIRMED']);
-        const totalUsers = await dbQuery('SELECT COUNT(*) as count FROM users WHERE is_active = 1');
+        const totalUsers = await dbQuery('SELECT COUNT(*) as count FROM users WHERE isActive = 1');
         const weekBookings = await dbQuery(`
-            SELECT b.*, r.name as room_name, u.name as user_name
+            SELECT b.*, r.name as roomName, u.name as userName
             FROM bookings b
-            LEFT JOIN rooms r ON b.room_id = r.id
-            LEFT JOIN users u ON b.user_id = u.id
+            LEFT JOIN rooms r ON b.roomId = r.id
+            LEFT JOIN users u ON b.userId = u.id
             WHERE b.date >= ? AND b.status = ?
             ORDER BY b.date ASC
             LIMIT 10
@@ -626,9 +582,9 @@ app.get('/api/dashboard', authenticate, async (req, res) => {
 app.get('/api/dashboard/stats', authenticate, async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        const totalRooms = await dbQuery('SELECT COUNT(*) as count FROM rooms WHERE is_active = 1');
+        const totalRooms = await dbQuery('SELECT COUNT(*) as count FROM rooms WHERE isActive = 1');
         const todayBookings = await dbQuery('SELECT COUNT(*) as count FROM bookings WHERE date = ? AND status = ?', [today, 'CONFIRMED']);
-        const totalUsers = await dbQuery('SELECT COUNT(*) as count FROM users WHERE is_active = 1');
+        const totalUsers = await dbQuery('SELECT COUNT(*) as count FROM users WHERE isActive = 1');
         
         res.json({
             totalRooms: totalRooms[0]?.count || 0,
@@ -642,10 +598,10 @@ app.get('/api/dashboard/upcoming', authenticate, async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
         const rows = await dbQuery(`
-            SELECT b.*, r.name as room_name, u.name as user_name
+            SELECT b.*, r.name as roomName, u.name as userName
             FROM bookings b
-            LEFT JOIN rooms r ON b.room_id = r.id
-            LEFT JOIN users u ON b.user_id = u.id
+            LEFT JOIN rooms r ON b.roomId = r.id
+            LEFT JOIN users u ON b.userId = u.id
             WHERE b.date >= ? AND b.status = ?
             ORDER BY b.date ASC
             LIMIT 10
@@ -655,23 +611,20 @@ app.get('/api/dashboard/upcoming', authenticate, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== ISSUES ====================
-
-app.get('/api/issues', authenticate, async (req, res) => {
+// ==================== ISSUES ====================\n\napp.get('/api/issues', authenticate, async (req, res) => {
     try {
-        const { status } = req.query;
-        let query = `
-            SELECT i.*, r.name as room_name, u.name as user_name
+        const { status } = req.query;\n        let query = `
+            SELECT i.*, r.name as roomName, u.name as userName
             FROM issue_reports i
-            LEFT JOIN rooms r ON i.room_id = r.id
-            LEFT JOIN users u ON i.user_id = u.id
+            LEFT JOIN rooms r ON i.roomId = r.id
+            LEFT JOIN users u ON i.userId = u.id
         `;
         const params: any[] = [];
         if (status) {
             query += ' WHERE i.status = ?';
             params.push(status);
         }
-        query += ' ORDER BY i.created_at DESC';
+        query += ' ORDER BY i.createdAt DESC';
         
         const rows = await dbQuery(query, params);
         res.json(rows);
@@ -683,7 +636,7 @@ app.post('/api/issues', authenticate, async (req: any, res) => {
         const id = createId();
         const { roomId, category, description, patrimonyNumber, title } = req.body;
         await dbRun(
-            'INSERT INTO issue_reports (id, user_id, room_id, category, description, patrimony_number, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO issue_reports (id, userId, roomId, category, description, patrimonyNumber, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [id, req.user.id, roomId, category || 'OTHER', description || title, patrimonyNumber || null, 'OPEN']
         );
         res.json({ id, userId: req.user.id, roomId, category, description, status: 'OPEN' });
@@ -694,24 +647,21 @@ app.put('/api/issues/:id', authenticate, ensureMaintenanceOrAdmin, async (req, r
     try {
         const { status, resolutionNotes } = req.body;
         const resolvedAt = status === 'RESOLVED' ? new Date().toISOString() : null;
-        await dbRun('UPDATE issue_reports SET status = ?, resolution_notes = ?, resolved_at = ?, updated_at = ? WHERE id = ?', 
+        await dbRun('UPDATE issue_reports SET status = ?, resolutionNotes = ?, resolvedAt = ?, updatedAt = ? WHERE id = ?', 
             [status, resolutionNotes || null, resolvedAt, new Date().toISOString(), req.params.id]);
         const rows = await dbQuery('SELECT * FROM issue_reports WHERE id = ?', [req.params.id]);
         res.json(rows[0]);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ==================== AUDIT LOGS ====================
-
-app.get('/api/audit-logs', authenticate, ensureAdmin, async (req, res) => {
+// ==================== AUDIT LOGS ====================\n\napp.get('/api/audit-logs', authenticate, ensureAdmin, async (req, res) => {
     try {
         const rows = await dbQuery(`
-            SELECT al.*, u.name as actor_name_current
+            SELECT al.*, u.name as actorNameCurrent
             FROM audit_logs al
-            LEFT JOIN users u ON al.actor_id = u.id
-            ORDER BY al.created_at DESC
-            LIMIT 100
-        `);
+            LEFT JOIN users u ON al.actorId = u.id
+            ORDER BY al.createdAt DESC
+            LIMIT 100\n        `);
         res.json(rows);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

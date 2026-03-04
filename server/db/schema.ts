@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, blob } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
@@ -37,11 +37,11 @@ export const users = sqliteTable('users', {
     username: text('username').notNull().unique(),
     name: text('name').notNull(),
     email: text('email').notNull().unique(),
-    photoUrl: text('photo_url'),
-    passwordHash: text('password_hash'),
+    photoUrl: text('photoUrl'), // Real column in Turso: photoUrl
+    passwordHash: text('passwordHash'), // Real column in Turso: passwordHash
     role: text('role').notNull().default(ROLE.USER),
-    isActive: boolean('is_active').default(true),
-    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    isActive: boolean('isActive').default(true), // Real column in Turso: isActive
+    createdAt: text('createdAt').default(sql`CURRENT_TIMESTAMP`), // Real column in Turso: createdAt
 });
 
 export const locations = sqliteTable('locations', {
@@ -57,71 +57,71 @@ export const roomTypes = sqliteTable('room_types', {
 export const rooms = sqliteTable('rooms', {
     id: text('id').primaryKey().$defaultFn(() => createId()),
     name: text('name').notNull(),
-    locationId: text('location_id').notNull().references(() => locations.id),
-    roomTypeId: text('room_type_id').notNull().references(() => roomTypes.id),
+    locationId: text('locationId').notNull().references(() => locations.id),
+    roomTypeId: text('roomTypeId').notNull().references(() => roomTypes.id),
     capacity: integer('capacity').notNull(),
-    resources: text('resources', { mode: 'json' }).notNull(), // Stored as JSON string
-    isActive: boolean('is_active').default(true),
+    resources: text('resources', { mode: 'json' }).notNull(), 
+    isActive: boolean('isActive').default(true),
 });
 
 export const periods = sqliteTable('periods', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     code: text('code').notNull(),
     label: text('label').notNull(),
-    startTime: text('start_time').notNull(),
-    endTime: text('end_time').notNull(),
+    startTime: text('startTime').notNull(),
+    endTime: text('endTime').notNull(),
 });
 
 export const bookings = sqliteTable('bookings', {
     id: text('id').primaryKey().$defaultFn(() => createId()),
-    roomId: text('room_id').notNull().references(() => rooms.id),
-    userId: text('user_id').notNull().references(() => users.id),
-    date: text('date').notNull(), // YYYY-MM-DD
-    periodId: integer('period_id').notNull().references(() => periods.id),
+    roomId: text('roomId').notNull().references(() => rooms.id),
+    userId: text('userId').notNull().references(() => users.id),
+    date: text('date').notNull(), 
+    periodId: integer('periodId').notNull().references(() => periods.id),
     title: text('title').notNull(),
     notes: text('notes'),
     status: text('status').notNull().default(BOOKING_STATUS.CONFIRMED),
-    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    createdAt: text('createdAt').default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const holidays = sqliteTable('holidays', {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    date: text('date').notNull(), // YYYY-MM-DD
+    date: text('date').notNull(), 
     name: text('name').notNull(),
 });
 
 export const blackouts = sqliteTable('blackouts', {
     id: text('id').primaryKey().$defaultFn(() => createId()),
-    date: text('date').notNull(), // YYYY-MM-DD
-    periodId: integer('period_id').references(() => periods.id),
-    roomId: text('room_id').references(() => rooms.id),
+    date: text('date').notNull(), 
+    periodId: integer('periodId').references(() => periods.id),
+    roomId: text('roomId').references(() => rooms.id),
     reason: text('reason').notNull(),
-    blockId: text('block_id'), // For grouping blackouts
+    blockId: text('blockId'), 
 });
 
 export const issueReports = sqliteTable('issue_reports', {
     id: text('id').primaryKey().$defaultFn(() => createId()),
-    roomId: text('room_id').notNull().references(() => rooms.id),
-    userId: text('user_id').notNull().references(() => users.id),
+    roomId: text('roomId').notNull().references(() => rooms.id),
+    userId: text('userId').notNull().references(() => users.id),
     category: text('category').notNull(),
-    patrimonyNumber: text('patrimony_number'),
+    patrimonyNumber: text('patrimonyNumber'),
     description: text('description').notNull(),
-    photoUrl: text('photo_url'),
+    photoUrl: text('photoUrl'),
     status: text('status').notNull().default(ISSUE_STATUS.OPEN),
-    resolutionNotes: text('resolution_notes'),
-    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
-    resolvedAt: text('resolved_at'),
+    resolutionNotes: text('resolutionNotes'),
+    createdAt: text('createdAt').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updatedAt').default(sql`CURRENT_TIMESTAMP`),
+    resolvedAt: text('resolvedAt'),
 });
 
 export const auditLogs = sqliteTable('audit_logs', {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    actorId: text('actor_id').notNull().references(() => users.id),
-    actorName: text('actor_name').notNull(), // Snapshot in case user changes name
+    actorId: text('actorId').notNull().references(() => users.id),
+    actorName: text('actorName').notNull(), 
     action: text('action').notNull(),
     entity: text('entity').notNull(),
-    entityId: text('entity_id').notNull(),
-    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    entityId: text('entityId').notNull(),
+    createdAt: text('createdAt').default(sql`CURRENT_TIMESTAMP`),
 });
 
 // RELATIONS
@@ -203,4 +203,3 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
         references: [users.id],
     }),
 }));
-
