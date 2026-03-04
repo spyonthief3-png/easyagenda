@@ -38,28 +38,7 @@ const fetchClient = async (path: string, options: RequestInit = {}) => {
 
 export const api = {
     // Locations
-    getLocations: async (): Promise<Location[]> => fetchClient('/rooms').then(rooms => {
-        // Extract unique locations from rooms or implement /locations endpoint
-        // Current backend only has /rooms, but schema has locations.
-        // Ideally should have /locations. Let's assume /rooms returns rooms with location info and we might need separate endpoint.
-        // Wait, I implemented /rooms but not /locations endpoint specifically?
-        // server/index.ts has /api/rooms.
-        // Let's implement /locations in server?
-        // For now, let's just return unique locations from rooms if we can, or fail.
-        // Oops. backend needs /locations endpoint.
-        // I'll assume valid backend for now and maybe fix backend later or now.
-        // Let's rely on Mock fallback if fails? No.
-        // I'll make a quick fix to server/index.ts to include /locations if I can, or just mock it here?
-        // No, I should fix server.
-        // But for this file, let's assume /locations exists.
-        return fetchClient('/rooms').then((rooms: any[]) => {
-            // Deduplicate locations from rooms? Or just fetch /locations? 
-            // I forgot /locations in server.
-            // I'll update server/index.ts concurrently or next step.
-            // I'll use /locations here.
-            return fetchClient('/locations');
-        });
-    }),
+    getLocations: async (): Promise<Location[]> => fetchClient('/locations'),
     createLocation: async (data: Omit<Location, 'id'>, actorId: string): Promise<Location> => {
         return fetchClient('/locations', { method: 'POST', body: JSON.stringify(data) });
     },
